@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>切换节点图片</title>
+    <style>::-webkit-scrollbar{display:none;}html,body{overflow:hidden;margin:0;}</style>
+</head>
+<body>
+<div id="mountNode"></div>
+<script>/*Fixing iframe window.innerHeight 0 issue in Safari*/document.body.clientHeight;</script>
+<script src="https://gw.alipayobjects.com/os/antv/pkg/_antv.g6-3.1.1/build/g6.js"></script>
+<script>
+  /**
+   * 本示例演示以下功能：
+   * 1、如何使用图片作为节点背景；
+   * 2、点击切换节点背景图片。
+   * 
+   */
+  G6.registerNode('circleNode', {
+    drawShape: function drawShape(cfg, group) {
+      var keyShape = group.addShape('circle', {
+        attrs: {
+          x: 0,
+          y: 0,
+          r: 30,
+          fill: '#87e8de'
+        }
+      });
+
+      return keyShape;
+    },
+     afterDraw(cfg, group) {
+          
+          const back1 = group.addShape('rect', {
+            zIndex: 9,
+			type:'rect',
+            attrs: {
+              x:20,
+              y: 0,
+              width: 130,
+			  height:20,
+              fill: 'gray',
+              opacity: 1,
+			  cursor: "pointer"
+            }
+          });
+          const back2 = group.addShape('rect', {
+		  type:'rect',
+            zIndex: 9,
+            attrs: {
+			cursor: "pointer",
+              x: -45,
+              y: 0,
+              width: 30,
+			  height:20,
+              fill: 'gray',
+              // 为了显示清晰，随意设置了颜色
+              opacity:1,
+			   
+            }
+          });
+          group.sort();
+        },
+  }, 'rect');
+// 封装点击添加边的交互
+G6.registerBehavior('click-add-edge', {
+  // 设定该自定义行为需要监听的事件及其响应函数
+  getEvents() {
+   return {
+     'node:mousedown': 'onClick' ,   // 监听事件 node:click，响应函数时 onClick
+     mousemove: 'onMousemove',   // 监听事件 mousemove，响应函数时 onMousemove
+     'mouseup': 'onEdgeClick' // 监听事件 edge:click，响应函数时 onEdgeClick
+   };
+  },
+  // getEvents 中定义的 'node:click' 的响应函数
+  onClick(ev) {
+  if(ev.target.type=='rect'){
+  
+    const node = ev.item;
+	const group = node.getContainer()
+    const graph = this.graph;
+    // 鼠标当前点击的节点的位置
+    const point = {x: ev.x, y: ev.y};
+    const model = node.getModel();
+    if (this.addingEdge && this.edge) {
+      graph.updateItem(this.edge, {
+        target: model.id
+      });
+      
+      this.edge = null;
+      this.addingEdge = false;
+    } else {
+      // 在图上新增一条边，结束点是鼠标当前点击的节点的位置
+      this.edge = graph.addItem('edge', {
+        source: model.id,
+        target: point
+      });
+      this.addingEdge = true;
+    }
+  }
+  },
+  // getEvents 中定义的 mousemove 的响应函数
+  onMousemove(ev) {
+    // 鼠标的当前位置
+    const point = {x: ev.x, y: ev.y};
+    if (this.addingEdge && this.edge) {
+      // 更新边的结束点位置为当前鼠标位置
+      this.graph.updateItem(this.edge, {
+        target: point
+      });
+    }
+  },
+  // getEvents 中定义的 'edge:click' 的响应函数
+  onEdgeClick(ev) {
+    const currentEdge = ev.item;
+    // 拖拽过程中，点击会点击到新增的边上
+    //if (this.addingEdge && this.edge == currentEdge) {
+      graph.removeItem(this.edge);
+      this.edge = null;
+      this.addingEdge = false;
+    //}
+  }
+});
+  var img = new Image();
+  img.src = 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1566553535233&di=b0b17eeea7bd7356a6f42ebfd48e9441&imgtype=0&src=http%3A%2F%2Fa2.att.hudong.com%2F64%2F29%2F01300543361379145388299988437_s.jpg';
+
+  // 点击图片节点，切换背景图片
+  var img2 = new Image();
+  img2.src = 'http://seopic.699pic.com/photo/50055/5642.jpg_wh1200.jpg';
+  var data = {
+    nodes: [{
+      x: 100,
+      y: 100,
+      shape: 'circleNode',
+      label: 'circle',
+      id: 'node1',
+      labelCfg: {
+        position: 'center'
+      }
+  }, {
+      x: 400,
+      y: 100,
+      shape: 'image',
+      id: 'node2',
+      img: img.src,
+      label: '头像',
+      style: {
+        cursor: 'pointer'
+      },
+      labelCfg: {
+        position: 'bottom'
+      }
+  }],
+    edges: [{
+      source: 'node1',
+      target: 'node2',
+      label: 'line',
+      labelCfg: {
+        refY: 10
+      }
+  }]
+  };
+  // 避免拖动过程中闪烁：使用加载已经LOAD好的图片
+  img.onload = function() {
+    var graph = new G6.Graph({
+      container: 'mountNode',
+      width: 1000,
+      height: 600,
+      defaultEdge: {
+        color: '#bae7ff'
+      },
+      modes: {
+        default: ['drag-node', {
+          type: 'drag-node'
+      },'click-add-edge']
+      }
+    });
+    graph.data(data);
+    graph.render();
+
+    graph.on('node:click', function(evt) {
+      var target = evt.target;
+
+      var type = target.get('type');
+      var hasChangeBg = target.get('hasChangeBg');
+      console.log(target);
+      if (type === 'image') {
+        if (!hasChangeBg) {
+          // 点击图片节点时，切换背景图片
+          target.attr('img', img2);
+          target.attr('imgSrc', 'http://seopic.699pic.com/photo/50055/5642.jpg_wh1200.jpg');
+          target.set('hasChangeBg', true);
+        } else {
+          target.attr('img', img);
+          target.attr('imgSrc', 'https://timgsa.baidu.com/timg?image&quality=80&size=b9999_10000&sec=1566553535233&di=b0b17eeea7bd7356a6f42ebfd48e9441&imgtype=0&src=http%3A%2F%2Fa2.att.hudong.com%2F64%2F29%2F01300543361379145388299988437_s.jpg');
+          target.set('hasChangeBg', false);
+        }
+        graph.paint();
+      }
+    });
+  };
+</script></body>
+</html>
